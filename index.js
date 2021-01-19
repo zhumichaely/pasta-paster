@@ -17,7 +17,7 @@ const TITLE_MAX = 64;
    This choice of request frequency balances the rate limits,
    keeps requests low(er), and *shouldn't* miss a new post */
 const posts = new SubmissionStream(BOT, {
-    subreddit: "testingground4bots",
+    subreddit: "copypasta",
     limit: 2,
     pollTime: 10000
 });
