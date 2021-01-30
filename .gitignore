@@ -105,3 +105,6 @@ dist
 
 # paste.ee key and Reddit credentials
 auth.js
+
+# Mod-chosen replies
+replies.js

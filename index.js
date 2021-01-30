@@ -1,18 +1,29 @@
 /* Michael Zhu 
-   u/cumifier implementation for r/copypasta */
+   Updated transcription bot for r/copypasta */
 
 const snoowrap = require("snoowrap");
 const { SubmissionStream } = require("snoostorm");
 const keys = require("./auth.js");
 const superagent = require("superagent");
+const replyWords = require("./replies.js").words;
 
 const BOT = new snoowrap(keys.credentials);
 const BOT_START = Date.now() / 1000;
 const TITLE_MAX = 64;
 
-/* paste.ee suggests a rate limit of 120 requests/10 min.
-   In practice, the API allocates 10 requests/min,
-   but that limit isn't enforced at all for some reason.
+/* chooses 4-8 random words from the list given by mods.
+   Entire comment will be hyperlinked to pastebin */
+function randomReply(words, link) {
+    let reply = "[";
+    const quantity = 3 + Math.random() * 5;
+    for (let i = 0; i < quantity; i++) {
+        const index = Math.random() * words.length;
+        reply += words[Math.floor(index)] + " ";
+    }
+    return reply.substring(0, reply.length - 1) + `](${link})`;
+}
+
+/* paste.ee suggests a rate limit of 10 requests/min.
    Reddit's request limit is 60 requests/min.
    This choice of request frequency balances the rate limits,
    keeps requests low(er), and *shouldn't* miss a new post */
@@ -22,9 +33,8 @@ const posts = new SubmissionStream(BOT, {
     pollTime: 10000
 });
 
-console.log("listening");
 posts.on("item", post => {
-    if (post.created_utc < BOT_START) return;
+    // if (post.created_utc < BOT_START) return;
     
     /* paste.ee limits titles to 64 characters.
        Reddit limits titles to 300 characters.
@@ -34,14 +44,14 @@ posts.on("item", post => {
         title = title.substring(0, TITLE_MAX - 3) + "...";
     }
 
-    /* pastes will stay up as long as paste.ee does.
-       consider donating to its author:
-       https://www.patreon.com/ccatss */
+    /* Reddit allows self posts with just a title.
+       paste.ee requires a text body, and conveniently,
+       happens to accept a zero-width space */
     const content = {
         expiration: "never",
         sections: [{
             name: title,
-            contents: post.selftext,
+            contents: post.selftext ? post.selftext : "\u200b",
         }]
     };
 
@@ -49,9 +59,8 @@ posts.on("item", post => {
     .set("Content-Type", "application/json")
     .set("X-Auth-Token", keys.auth)
     .send(JSON.stringify(content))
-    /* bot will comment the link under every post */
     .then(response => {
-        post.reply(`Copy this pasta [here](${response.body.link}).`);
+        post.reply(randomReply(replyWords, response.body.link));
     })
     /* no error handling. I am still just a student,
        and frankly I have no idea what to do here */
