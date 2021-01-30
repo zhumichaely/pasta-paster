@@ -34,7 +34,7 @@ const posts = new SubmissionStream(BOT, {
 });
 
 posts.on("item", post => {
-    // if (post.created_utc < BOT_START) return;
+    if (post.created_utc < BOT_START) return;
     
     /* paste.ee limits titles to 64 characters.
        Reddit limits titles to 300 characters.
@@ -44,9 +44,9 @@ posts.on("item", post => {
         title = title.substring(0, TITLE_MAX - 3) + "...";
     }
 
-    /* Reddit allows self posts with just a title.
-       paste.ee requires a text body, and conveniently,
-       happens to accept a zero-width space */
+    /* Reddit allows self posts with no text body.
+       paste.ee requires a text body, but also
+       conveniently happens to accept a zero-width space */
     const content = {
         expiration: "never",
         sections: [{
