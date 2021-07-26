@@ -77,12 +77,13 @@ posts.on("item", post => {
 });
 
 /* attempt to comment the head of the post queue */
-function tryComment() {
+async function tryComment() {
     if (POST_QUEUE.length === 0) return;
 
     const comment = POST_QUEUE[0];
     try {
-        comment.post.reply(comment.reply);
+        await comment.post.reply(comment.reply);
+        /* only move on after SUCCESSFUL post */
         POST_QUEUE.shift();
     }
     catch (err) {
@@ -90,7 +91,9 @@ function tryComment() {
     }
 }
 
-/* Trying often will avoid situations where the interval
+/* the limit may be 10 minutes but trying often
+   will avoid situations where a 10-minute interval
    is off by a little and the bot has to wait a lot
-   before it tries again when it doesn't have to. */
+   before it tries again when it doesn't have to */
 setInterval(tryComment, 10000);
+console.log("STARTED");
