@@ -1,5 +1,10 @@
 /* Michael Zhu 
-   Updated transcription bot for r/copypasta */
+   Updated transcription bot for r/copypasta
+   
+   V3 UPDATE: Reddit has imposed a new COMMENT rate limit.
+   The request rate limit remains the same,
+   but bots can now only post every 10 minutes or so.
+   The addition of the post queue attempts to salvage this */
 
 const snoowrap = require("snoowrap");
 const { SubmissionStream } = require("snoostorm");
@@ -10,6 +15,7 @@ const replyWords = require("./replies.js").words;
 const BOT = new snoowrap(keys.credentials);
 const BOT_START = Date.now() / 1000;
 const TITLE_MAX = 64;
+const POST_QUEUE = [];
 
 /* chooses 4-8 random words from the list given by mods.
    Entire comment will be hyperlinked to pastebin */
@@ -60,9 +66,31 @@ posts.on("item", post => {
     .set("X-Auth-Token", keys.auth)
     .send(JSON.stringify(content))
     .then(response => {
-        post.reply(randomReply(replyWords, response.body.link));
+        POST_QUEUE.push({
+            post: post,
+            reply: randomReply(replyWords, response.body.link)
+        });
     })
-    /* no error handling. I am still just a student,
-       and frankly I have no idea what to do here */
+    /* the paste.ee API has not failed a single time.
+       The new rate limit from Reddit is handled separately */
     .catch(err => console.log(err));
 });
+
+/* attempt to comment the head of the post queue */
+function tryComment() {
+    if (POST_QUEUE.length === 0) return;
+
+    const comment = POST_QUEUE[0];
+    try {
+        comment.post.reply(comment.reply);
+        POST_QUEUE.shift();
+    }
+    catch (err) {
+        console.log(err);
+    }
+}
+
+/* Trying often will avoid situations where the interval
+   is off by a little and the bot has to wait a lot
+   before it tries again when it doesn't have to. */
+setInterval(tryComment, 10000);
